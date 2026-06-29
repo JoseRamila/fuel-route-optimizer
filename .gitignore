@@ -1,28 +1,63 @@
+# ==========================
 # Python
+# ==========================
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 .Python
 
-# Virtual environment
+# Virtual environments
 .venv/
 venv/
 env/
 
+# ==========================
 # Environment variables
+# ==========================
 .env
+.env.*
+!.env.example
 
-# Database
-db.sqlite3
+backend/.env
 
+# ==========================
+# Databases
+# ==========================
+*.sqlite3
+
+# ==========================
 # Django
+# ==========================
 staticfiles/
 media/
 
-# IDE
-.vscode/
+# ==========================
+# Node
+# ==========================
+node_modules/
+frontend/node_modules/
 
-# OS
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build
+frontend/dist/
+dist/
+
+# Vite
+.vite/
+
+# ==========================
+# IDE
+# ==========================
+.vscode/
+.idea/
+
+# ==========================
+# Operating System
+# ==========================
 .DS_Store
 Thumbs.db

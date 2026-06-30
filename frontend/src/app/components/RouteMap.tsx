@@ -2,18 +2,6 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// Fix default marker icons
-import icon from "leaflet/dist/images/marker-icon.png";
-import iconShadow from "leaflet/dist/images/marker-shadow.png";
-
-const DefaultIcon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
-L.Marker.prototype.options.icon = DefaultIcon;
-
 function makePinIcon(color: string) {
   return new L.Icon({
     iconUrl:
@@ -42,55 +30,80 @@ interface RouteMapProps {
   routePath: Array<[number, number]>;
 }
 
-export function RouteMap({ startLocation, endLocation, fuelStops, routePath }: RouteMapProps) {
+export function RouteMap({
+  startLocation,
+  endLocation,
+  fuelStops,
+  routePath,
+}: RouteMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const routeLayerRef = useRef<L.LayerGroup | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || mapRef.current) return;
 
-    const center: [number, number] = [
-      (startLocation[0] + endLocation[0]) / 2,
-      (startLocation[1] + endLocation[1]) / 2,
-    ];
+    const map = L.map(containerRef.current, { zoomControl: false }).setView(
+      startLocation,
+      6
+    );
 
-    const map = L.map(containerRef.current, { zoomControl: false }).setView(center, 6);
     mapRef.current = map;
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "&copy; OpenStreetMap contributors",
     }).addTo(map);
 
-    L.polyline(routePath, { color: "#2563eb", weight: 4, opacity: 0.7 }).addTo(map);
-
-    L.marker(startLocation, { icon: startIcon })
-      .addTo(map)
-      .bindPopup("<div class='font-medium'>Start: Chicago, IL</div>");
-
-    L.marker(endLocation, { icon: endIcon })
-      .addTo(map)
-      .bindPopup("<div class='font-medium'>End: Houston, TX</div>");
-
-    fuelStops.forEach((stop) => {
-      L.marker(stop.position, { icon: fuelIcon })
-        .addTo(map)
-        .bindPopup(`<div><div class='font-semibold'>${stop.name}</div><div class='text-sm text-gray-600'>${stop.location}</div></div>`);
-    });
+    routeLayerRef.current = L.layerGroup().addTo(map);
 
     return () => {
       map.remove();
       mapRef.current = null;
+      routeLayerRef.current = null;
     };
   }, []);
 
   useEffect(() => {
-    if (!mapRef.current) return;
-    const center: [number, number] = [
-      (startLocation[0] + endLocation[0]) / 2,
-      (startLocation[1] + endLocation[1]) / 2,
-    ];
-    mapRef.current.setView(center, 6);
-  }, [startLocation, endLocation]);
+    if (!mapRef.current || !routeLayerRef.current) return;
+
+    routeLayerRef.current.clearLayers();
+
+    const validRoutePath =
+      routePath.length > 0 ? routePath : [startLocation, endLocation];
+
+    L.polyline(validRoutePath, {
+      color: "#2563eb",
+      weight: 4,
+      opacity: 0.75,
+    }).addTo(routeLayerRef.current);
+
+    L.marker(startLocation, { icon: startIcon })
+      .addTo(routeLayerRef.current)
+      .bindPopup("<div class='font-medium'>Start</div>");
+
+    L.marker(endLocation, { icon: endIcon })
+      .addTo(routeLayerRef.current)
+      .bindPopup("<div class='font-medium'>End</div>");
+
+    fuelStops.forEach((stop) => {
+      L.marker(stop.position, { icon: fuelIcon })
+        .addTo(routeLayerRef.current!)
+        .bindPopup(
+          `<div><div class='font-semibold'>${stop.name}</div><div class='text-sm text-gray-600'>${stop.location}</div></div>`
+        );
+    });
+
+    const bounds = L.latLngBounds(validRoutePath);
+
+    fuelStops.forEach((stop) => {
+      bounds.extend(stop.position);
+    });
+
+    mapRef.current.fitBounds(bounds, {
+      padding: [40, 40],
+      maxZoom: 7,
+    });
+  }, [startLocation, endLocation, fuelStops, routePath]);
 
   return (
     <div className="w-full h-full rounded-lg overflow-hidden relative">
@@ -103,6 +116,7 @@ export function RouteMap({ startLocation, endLocation, fuelStops, routePath }: R
         >
           +
         </button>
+
         <button
           onClick={() => mapRef.current?.zoomOut()}
           className="px-3 py-2 hover:bg-gray-100 transition-colors text-lg font-semibold"

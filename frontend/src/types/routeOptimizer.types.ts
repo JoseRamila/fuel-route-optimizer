@@ -4,26 +4,34 @@ export interface OptimizeFuelRouteRequest {
 }
 
 export interface RouteGeoJson {
-  type: string;
+  type: "LineString";
   coordinates: [number, number][];
 }
 
 export interface FuelStop {
-  truckstop_name?: string;
-  name?: string;
-  city?: string;
-  state?: string;
-  retail_price?: number;
-  distance_along_route_miles?: number;
-  distance_from_route_miles?: number;
+  opis_truckstop_id: string;
+  truckstop_name: string;
+  address?: string;
+  city: string;
+  state: string;
+  retail_price: number;
+  latitude?: number;
+  longitude?: number;
+  distance_along_route_miles: number;
+  distance_from_route_miles: number;
   gallons_to_buy?: number;
+  gallons_used?: number;
   fuel_cost?: number;
+  estimated_cost?: number;
 }
 
 export interface FinalSegment {
-  distance_miles?: number;
-  estimated_gallons_needed?: number;
-  estimated_fuel_cost?: number;
+  segment_miles: number;
+  gallons_needed: number;
+  price_per_gallon_used: number;
+  estimated_cost: number;
+  
+
 }
 
 export interface OptimizeFuelRouteResponse {

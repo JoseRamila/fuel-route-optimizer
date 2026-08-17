@@ -463,13 +463,13 @@ The frontend displays:
 
 ## Screenshots
 
-Add screenshots here after running the app locally or deploying it.
+### Dashboard
 
-```md
 ![Fuel Route Optimizer dashboard](./docs/screenshots/dashboard.png)
-![Fuel stop recommendations](./docs/screenshots/fuel-stops.png)
-```
 
+### Fuel Stop Recommendations
+
+![Fuel stop recommendations](./docs/screenshots/fuel-stops.png)
 ---
 
 ## What I Learned

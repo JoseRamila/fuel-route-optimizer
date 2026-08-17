@@ -11,6 +11,15 @@ from routes.services.fuel_optimizer import (
 )
 from routes.services.routing_client import RoutingServiceError, get_route
 
+class HealthCheckView(APIView):
+    def get(self, request):
+        return Response(
+            {
+                "status": "ok",
+                "service": "fuel-route-optimizer-api",
+            }
+        )
+
 
 class OptimizeFuelRouteView(APIView):
     def post(self, request):

@@ -25,7 +25,7 @@ function formatNumber(value?: number) {
 
 export function MetricsSection({ routeResult }: MetricsSectionProps) {
   return (
-    <div className="grid grid-cols-4 gap-4 mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
       <MetricCard
         icon={Route}
         label="Distance"

@@ -26,8 +26,23 @@ interface RouteMapProps {
     name: string;
     location: string;
     position: [number, number];
+    mile?: number;
+    price?: number;
+    estimatedCost?: number;
   }>;
   routePath: Array<[number, number]>;
+}
+
+function formatMiles(value?: number) {
+  if (value === undefined || value === null) return "—";
+  return `${value.toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  })} mi`;
+}
+
+function formatCurrency(value?: number) {
+  if (value === undefined || value === null) return "—";
+  return `$${value.toFixed(2)}`;
 }
 
 export function RouteMap({
@@ -89,7 +104,21 @@ export function RouteMap({
       L.marker(stop.position, { icon: fuelIcon })
         .addTo(routeLayerRef.current!)
         .bindPopup(
-          `<div><div class='font-semibold'>${stop.name}</div><div class='text-sm text-gray-600'>${stop.location}</div></div>`
+          `
+          <div style="min-width: 180px;">
+            <div style="font-weight: 700; margin-bottom: 4px;">${stop.name}</div>
+            <div style="font-size: 12px; color: #4b5563; margin-bottom: 8px;">
+              ${stop.location}
+            </div>
+            <div style="font-size: 12px; color: #111827;">
+              <div><strong>Route mile:</strong> ${formatMiles(stop.mile)}</div>
+              <div><strong>Price:</strong> ${formatCurrency(stop.price)}/gal</div>
+              <div><strong>Est. cost:</strong> ${formatCurrency(
+                stop.estimatedCost
+              )}</div>
+            </div>
+          </div>
+          `
         );
     });
 
@@ -113,6 +142,8 @@ export function RouteMap({
         <button
           onClick={() => mapRef.current?.zoomIn()}
           className="px-3 py-2 hover:bg-gray-100 transition-colors text-lg font-semibold border-b border-gray-200"
+          type="button"
+          aria-label="Zoom in"
         >
           +
         </button>
@@ -120,6 +151,8 @@ export function RouteMap({
         <button
           onClick={() => mapRef.current?.zoomOut()}
           className="px-3 py-2 hover:bg-gray-100 transition-colors text-lg font-semibold"
+          type="button"
+          aria-label="Zoom out"
         >
           −
         </button>

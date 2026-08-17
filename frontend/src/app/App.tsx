@@ -20,7 +20,10 @@ type MapFuelStop = {
 
 function formatMiles(value?: number) {
   if (value === undefined || value === null) return "—";
-  return `${value.toLocaleString()} mi`;
+
+  return `${value.toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  })} mi`;
 }
 
 function toLeafletCoordinates(
@@ -107,12 +110,18 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-6">
-              <button className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors">
+              <button
+                className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors"
+                type="button"
+              >
                 <HelpCircle className="w-5 h-5" />
                 <span className="text-sm font-medium">Help</span>
               </button>
 
-              <button className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors">
+              <button
+                className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors"
+                type="button"
+              >
                 <Settings className="w-5 h-5" />
                 <span className="text-sm font-medium">Settings</span>
               </button>
@@ -137,10 +146,10 @@ export default function App() {
         />
 
         {isError && (
-          <p className="mb-4 text-sm text-red-600">
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             Unable to calculate route. Please verify the locations and try
             again.
-          </p>
+          </div>
         )}
 
         <MetricsSection routeResult={routeResult} />
@@ -183,6 +192,8 @@ export default function App() {
                       mile={stop.distance_along_route_miles}
                       price={stop.retail_price}
                       estimatedCost={stop.estimated_cost ?? stop.fuel_cost ?? 0}
+                      segmentMiles={stop.segment_miles}
+                      gallonsPurchased={stop.gallons_purchased}
                     />
                   ))}
 
@@ -204,12 +215,45 @@ export default function App() {
 
                         <div className="text-sm">
                           <span className="text-gray-600">Distance: </span>
+
                           <span className="font-medium text-gray-900">
                             {formatMiles(
                               routeResult.final_segment.segment_miles
                             )}
                           </span>
                         </div>
+
+                        {routeResult.final_segment.gallons_needed !==
+                          undefined && (
+                          <div className="text-sm mt-1">
+                            <span className="text-gray-600">
+                              Gallons needed:{" "}
+                            </span>
+
+                            <span className="font-medium text-gray-900">
+                              {routeResult.final_segment.gallons_needed.toFixed(
+                                2
+                              )}{" "}
+                              gal
+                            </span>
+                          </div>
+                        )}
+
+                        {routeResult.final_segment.estimated_cost !==
+                          undefined && (
+                          <div className="text-sm mt-1">
+                            <span className="text-gray-600">
+                              Estimated cost:{" "}
+                            </span>
+
+                            <span className="font-medium text-green-600">
+                              $
+                              {routeResult.final_segment.estimated_cost.toFixed(
+                                2
+                              )}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

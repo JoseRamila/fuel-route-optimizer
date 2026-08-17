@@ -8,6 +8,8 @@ import type { OptimizeFuelRouteResponse } from "../../types/routeOptimizer.types
 export function useRouteOptimization() {
   const [startLocation, setStartLocation] = useState("Chicago, IL");
   const [finishLocation, setFinishLocation] = useState("Houston, TX");
+  const [vehicleRangeMiles, setVehicleRangeMiles] = useState(500);
+  const [fuelEfficiencyMpg, setFuelEfficiencyMpg] = useState(10);
   const [routeResult, setRouteResult] =
     useState<OptimizeFuelRouteResponse | null>(null);
 
@@ -25,6 +27,8 @@ export function useRouteOptimization() {
       {
         start: startLocation,
         finish: finishLocation,
+        vehicle_range_miles: vehicleRangeMiles,
+        fuel_efficiency_mpg: fuelEfficiencyMpg,
       },
       {
         onSuccess: (data) => {
@@ -40,11 +44,16 @@ export function useRouteOptimization() {
   return {
     startLocation,
     finishLocation,
+    vehicleRangeMiles,
+    fuelEfficiencyMpg,
     routeResult,
     isLoading: optimizeRouteMutation.isPending,
     isError: optimizeRouteMutation.isError,
+    error: optimizeRouteMutation.error,
     setStartLocation,
     setFinishLocation,
+    setVehicleRangeMiles,
+    setFuelEfficiencyMpg,
     swapLocations,
     calculateRoute,
   };

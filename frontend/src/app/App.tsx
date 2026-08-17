@@ -52,16 +52,20 @@ function buildMapFuelStops(fuelStops: FuelStop[]): MapFuelStop[] {
 
 export default function App() {
   const {
-    startLocation,
-    finishLocation,
-    routeResult,
-    isLoading,
-    isError,
-    setStartLocation,
-    setFinishLocation,
-    swapLocations,
-    calculateRoute,
-  } = useRouteOptimization();
+  startLocation,
+  finishLocation,
+  vehicleRangeMiles,
+  fuelEfficiencyMpg,
+  routeResult,
+  isLoading,
+  isError,
+  setStartLocation,
+  setFinishLocation,
+  setVehicleRangeMiles,
+  setFuelEfficiencyMpg,
+  swapLocations,
+  calculateRoute,
+} = useRouteOptimization();
 
   const routePath = routeResult
     ? toLeafletCoordinates(routeResult.route_geojson.coordinates)
@@ -116,9 +120,13 @@ export default function App() {
         <SearchPanel
           startLocation={startLocation}
           finishLocation={finishLocation}
+          vehicleRangeMiles={vehicleRangeMiles}
+          fuelEfficiencyMpg={fuelEfficiencyMpg}
           isLoading={isLoading}
           onStartLocationChange={setStartLocation}
           onFinishLocationChange={setFinishLocation}
+          onVehicleRangeMilesChange={setVehicleRangeMiles}
+          onFuelEfficiencyMpgChange={setFuelEfficiencyMpg}
           onSwapLocations={swapLocations}
           onCalculateRoute={calculateRoute}
         />

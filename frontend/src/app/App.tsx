@@ -1,6 +1,7 @@
 import { Fuel, HelpCircle, MapPin, Settings, Target } from "lucide-react";
 
 import { FuelStopCard } from "./components/FuelStopCard";
+import { LoadingState } from "./components/LoadingState";
 import { RouteMap } from "./components/RouteMap";
 import { useRouteOptimization } from "./hooks/useRouteOptimization";
 import { MetricsSection } from "./sections/MetricsSection";
@@ -151,6 +152,8 @@ export default function App() {
             again.
           </div>
         )}
+
+        {isLoading && <LoadingState />}
 
         <MetricsSection routeResult={routeResult} />
 

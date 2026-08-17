@@ -1,9 +1,10 @@
 import { Fuel, HelpCircle, MapPin, Settings, Target } from "lucide-react";
 
-import { RouteMap } from "./components/RouteMap";
 import { FuelStopCard } from "./components/FuelStopCard";
+import { RouteMap } from "./components/RouteMap";
 import { useRouteOptimization } from "./hooks/useRouteOptimization";
 import { MetricsSection } from "./sections/MetricsSection";
+import { OptimizationDetailsSection } from "./sections/OptimizationDetailsSection";
 import { SearchPanel } from "./sections/SearchPanel";
 
 import type { FuelStop } from "../types/routeOptimizer.types";
@@ -52,20 +53,20 @@ function buildMapFuelStops(fuelStops: FuelStop[]): MapFuelStop[] {
 
 export default function App() {
   const {
-  startLocation,
-  finishLocation,
-  vehicleRangeMiles,
-  fuelEfficiencyMpg,
-  routeResult,
-  isLoading,
-  isError,
-  setStartLocation,
-  setFinishLocation,
-  setVehicleRangeMiles,
-  setFuelEfficiencyMpg,
-  swapLocations,
-  calculateRoute,
-} = useRouteOptimization();
+    startLocation,
+    finishLocation,
+    vehicleRangeMiles,
+    fuelEfficiencyMpg,
+    routeResult,
+    isLoading,
+    isError,
+    setStartLocation,
+    setFinishLocation,
+    setVehicleRangeMiles,
+    setFuelEfficiencyMpg,
+    swapLocations,
+    calculateRoute,
+  } = useRouteOptimization();
 
   const routePath = routeResult
     ? toLeafletCoordinates(routeResult.route_geojson.coordinates)
@@ -75,7 +76,10 @@ export default function App() {
     routePath[0] ?? ([41.8781, -87.6298] as [number, number]);
 
   const endCoordinates =
-    routePath[routePath.length - 1] ?? ([29.7604, -95.3698] as [number, number]);
+    routePath[routePath.length - 1] ?? ([29.7604, -95.3698] as [
+      number,
+      number,
+    ]);
 
   const mapFuelStops = routeResult
     ? buildMapFuelStops(routeResult.fuel_stops)
@@ -95,6 +99,7 @@ export default function App() {
                 <h1 className="text-2xl font-bold text-gray-900">
                   Fuel Route Optimizer
                 </h1>
+
                 <p className="text-sm text-gray-600">
                   Route-based fuel stop optimization
                 </p>
@@ -140,7 +145,9 @@ export default function App() {
 
         <MetricsSection routeResult={routeResult} />
 
-        <div className="grid grid-cols-[1fr,400px] gap-6">
+        <OptimizationDetailsSection routeResult={routeResult} />
+
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr,400px] gap-6">
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 h-[600px]">
             <RouteMap
               startLocation={startCoordinates}
@@ -198,7 +205,9 @@ export default function App() {
                         <div className="text-sm">
                           <span className="text-gray-600">Distance: </span>
                           <span className="font-medium text-gray-900">
-                            {formatMiles(routeResult.final_segment.segment_miles)}
+                            {formatMiles(
+                              routeResult.final_segment.segment_miles
+                            )}
                           </span>
                         </div>
                       </div>

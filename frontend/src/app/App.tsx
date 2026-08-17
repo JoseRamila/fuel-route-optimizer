@@ -1,5 +1,6 @@
 import { Fuel, HelpCircle, MapPin, Settings, Target } from "lucide-react";
 
+import { EmptyRouteState } from "./components/EmptyRouteState";
 import { FuelStopCard } from "./components/FuelStopCard";
 import { LoadingState } from "./components/LoadingState";
 import { RouteMap } from "./components/RouteMap";
@@ -262,9 +263,7 @@ export default function App() {
                   </div>
                 </>
               ) : (
-                <div className="text-sm text-gray-500 border border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  Calculate a route to see recommended fuel stops.
-                </div>
+                <EmptyRouteState />
               )}
             </div>
           </div>

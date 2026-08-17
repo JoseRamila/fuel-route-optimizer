@@ -1,6 +1,7 @@
 import { Fuel, HelpCircle, MapPin, Settings, Target } from "lucide-react";
 
 import { EmptyRouteState } from "./components/EmptyRouteState";
+import { ErrorState } from "./components/ErrorState";
 import { FuelStopCard } from "./components/FuelStopCard";
 import { LoadingState } from "./components/LoadingState";
 import { RouteMap } from "./components/RouteMap";
@@ -147,12 +148,7 @@ export default function App() {
           onCalculateRoute={calculateRoute}
         />
 
-        {isError && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            Unable to calculate route. Please verify the locations and try
-            again.
-          </div>
-        )}
+        {isError && <ErrorState onRetry={calculateRoute} />}
 
         {isLoading && <LoadingState />}
 

@@ -86,7 +86,7 @@ class OptimizeFuelRouteView(APIView):
                     "fuel_stop_coordinates": "Approximated using city/state coordinates",
                     "optimization_strategy": "Greedy selection of lowest-price reachable stop",
                     "refuel_search_window_miles": (
-                        f"{REFUEL_SEARCH_START_MILES}-{vehicle_range_miles}"
+                        f"{REFUEL_SEARCH_START_MILES:g}-{vehicle_range_miles:g}"
                     ),
                     "route_provider": "OpenRouteService",
                     "route_units": "miles",

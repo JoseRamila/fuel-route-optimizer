@@ -55,22 +55,25 @@ def get_fuel_stops_near_route(
 def select_optimal_fuel_stops(
     nearby_fuel_stops: list[dict],
     total_distance_miles: float,
-) -> list[dict]:
+    vehicle_range_miles: float = VEHICLE_RANGE_MILES,
+    refuel_search_start_miles: float = REFUEL_SEARCH_START_MILES,
+) -> dict:
     """
     Selects cost-effective fuel stops along the route.
 
     The algorithm uses a greedy strategy:
-    - The vehicle can travel up to 500 miles.
-    - For each segment, it searches for fuel stops between 350 and 500 miles
-      from the last refuel point.
+    - The vehicle can travel up to vehicle_range_miles.
+    - For each segment, it searches for fuel stops between
+      refuel_search_start_miles and vehicle_range_miles from the last refuel point.
     - It selects the cheapest fuel stop within that reachable window.
     """
     selected_stops = []
+    warnings = []
     current_position_miles = 0.0
 
-    while total_distance_miles - current_position_miles > VEHICLE_RANGE_MILES:
-        min_reachable_mile = current_position_miles + REFUEL_SEARCH_START_MILES
-        max_reachable_mile = current_position_miles + VEHICLE_RANGE_MILES
+    while total_distance_miles - current_position_miles > vehicle_range_miles:
+        min_reachable_mile = current_position_miles + refuel_search_start_miles
+        max_reachable_mile = current_position_miles + vehicle_range_miles
 
         candidate_stops = [
             stop
@@ -90,6 +93,11 @@ def select_optimal_fuel_stops(
             ]
 
         if not candidate_stops:
+            warnings.append(
+                "No reachable fuel stop found between "
+                f"mile {round(current_position_miles, 2)} and "
+                f"mile {round(max_reachable_mile, 2)}."
+            )
             break
 
         best_stop = min(candidate_stops, key=lambda stop: stop["retail_price"])
@@ -97,25 +105,28 @@ def select_optimal_fuel_stops(
         selected_stops.append(best_stop)
         current_position_miles = best_stop["distance_along_route_miles"]
 
-    return selected_stops
+    return {
+        "selected_stops": selected_stops,
+        "warnings": warnings,
+    }
 
 
 def calculate_fuel_costs(
     selected_fuel_stops: list[dict],
     total_distance_miles: float,
+    fuel_efficiency_mpg: float = FUEL_EFFICIENCY_MPG,
 ) -> dict:
     """
     Calculates gallons and estimated fuel cost for each route segment.
 
     Assumptions:
-    - Vehicle fuel efficiency is 10 MPG.
-    - Vehicle maximum range is 500 miles.
+    - Vehicle fuel efficiency is fuel_efficiency_mpg.
     - The vehicle starts with enough fuel to reach the first selected stop.
-    - Each selected stop price is used for the segment after that stop.
+    - Each selected stop price is used as the reference price for its segment.
     """
-    if not selected_fuel_stops:
-        estimated_gallons_needed = total_distance_miles / FUEL_EFFICIENCY_MPG
+    estimated_gallons_needed = total_distance_miles / fuel_efficiency_mpg
 
+    if not selected_fuel_stops:
         return {
             "estimated_gallons_needed": round(estimated_gallons_needed, 2),
             "total_fuel_cost": 0.0,
@@ -125,7 +136,7 @@ def calculate_fuel_costs(
                 "gallons_needed": round(estimated_gallons_needed, 2),
                 "price_per_gallon_used": None,
                 "estimated_cost": 0.0,
-                "note": "No fuel stop required within the 500-mile vehicle range.",
+                "note": "No fuel stop required within the vehicle range.",
             },
         }
 
@@ -135,7 +146,7 @@ def calculate_fuel_costs(
 
     for fuel_stop in selected_fuel_stops:
         segment_miles = fuel_stop["distance_along_route_miles"] - previous_position_miles
-        gallons_purchased = segment_miles / FUEL_EFFICIENCY_MPG
+        gallons_purchased = segment_miles / fuel_efficiency_mpg
         estimated_cost = gallons_purchased * fuel_stop["retail_price"]
 
         fuel_stops_with_costs.append(
@@ -152,16 +163,13 @@ def calculate_fuel_costs(
 
     last_stop = selected_fuel_stops[-1]
     final_segment_miles = total_distance_miles - previous_position_miles
-    final_segment_gallons = final_segment_miles / FUEL_EFFICIENCY_MPG
+    final_segment_gallons = final_segment_miles / fuel_efficiency_mpg
     final_segment_cost = final_segment_gallons * last_stop["retail_price"]
 
     total_cost += final_segment_cost
 
     return {
-        "estimated_gallons_needed": round(
-            total_distance_miles / FUEL_EFFICIENCY_MPG,
-            2,
-        ),
+        "estimated_gallons_needed": round(estimated_gallons_needed, 2),
         "total_fuel_cost": round(total_cost, 2),
         "fuel_stops": fuel_stops_with_costs,
         "final_segment": {

@@ -1,26 +1,16 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import {
-  Fuel,
-  ArrowLeftRight,
-  Route,
-  DollarSign,
-  Gauge,
-  MapPin,
-  HelpCircle,
-  Settings,
-  Target,
-} from "lucide-react";
+import { Fuel, HelpCircle, MapPin, Settings, Target } from "lucide-react";
 
-import { RouteMap } from "./components/RouteMap";
-import { MetricCard } from "./components/MetricCard";
+import { EmptyRouteState } from "./components/EmptyRouteState";
+import { ErrorState } from "./components/ErrorState";
 import { FuelStopCard } from "./components/FuelStopCard";
-import { optimizeFuelRoute } from "../services/routeOptimizerService";
+import { LoadingState } from "./components/LoadingState";
+import { RouteMap } from "./components/RouteMap";
+import { useRouteOptimization } from "./hooks/useRouteOptimization";
+import { MetricsSection } from "./sections/MetricsSection";
+import { OptimizationDetailsSection } from "./sections/OptimizationDetailsSection";
+import { SearchPanel } from "./sections/SearchPanel";
 
-import type {
-  FuelStop,
-  OptimizeFuelRouteResponse,
-} from "../types/routeOptimizer.types";
+import type { FuelStop } from "../types/routeOptimizer.types";
 
 type MapFuelStop = {
   name: string;
@@ -31,109 +21,75 @@ type MapFuelStop = {
   estimatedCost: number;
 };
 
-type ExtendedFuelStop = FuelStop & {
-  truckstop_name?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  latitude?: number;
-  longitude?: number;
-  lat?: number;
-  lng?: number;
-  lon?: number;
-};
-
-function formatCurrency(value?: number) {
-  if (value === undefined || value === null) return "—";
-
-  return `$${value.toFixed(2)}`;
-}
-
 function formatMiles(value?: number) {
   if (value === undefined || value === null) return "—";
 
-  return `${value.toLocaleString()} mi`;
+  return `${value.toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  })} mi`;
 }
 
-function formatNumber(value?: number) {
-  if (value === undefined || value === null) return "—";
-
-  return value.toFixed(2);
-}
-
-function toLeafletCoordinates(coordinates: [number, number][]): [number, number][] {
+function toLeafletCoordinates(
+  coordinates: [number, number][]
+): [number, number][] {
   return coordinates.map(([longitude, latitude]) => [latitude, longitude]);
 }
 
-function buildMapFuelStops(fuelStops: ExtendedFuelStop[]): MapFuelStop[] {
+function buildMapFuelStops(fuelStops: FuelStop[]): MapFuelStop[] {
   return fuelStops
     .map((stop) => {
-      const latitude = stop.latitude ?? stop.lat;
-      const longitude = stop.longitude ?? stop.lng ?? stop.lon;
-
-      if (latitude === undefined || longitude === undefined) {
+      if (stop.latitude === undefined || stop.longitude === undefined) {
         return null;
       }
 
       return {
-        name: stop.truckstop_name ?? "Unknown fuel stop",
+        name: stop.truckstop_name,
         location:
           [stop.city, stop.state].filter(Boolean).join(", ") ||
           stop.address ||
           "Unknown location",
-        position: [latitude, longitude] as [number, number],
-        mile: stop.distance_along_route_miles ?? 0,
-        price: stop.retail_price ?? 0,
-        estimatedCost: stop.fuel_cost ?? 0,
-        
+        position: [stop.latitude, stop.longitude],
+        mile: stop.distance_along_route_miles,
+        price: stop.retail_price,
+        estimatedCost: stop.estimated_cost ?? stop.fuel_cost ?? 0,
       };
     })
     .filter((stop): stop is MapFuelStop => stop !== null);
 }
 
 export default function App() {
-  const [startLocation, setStartLocation] = useState("Chicago, IL");
-  const [finishLocation, setFinishLocation] = useState("Houston, TX");
-  const [routeResult, setRouteResult] =
-    useState<OptimizeFuelRouteResponse | null>(null);
-
-  const optimizeRouteMutation = useMutation({
-    mutationFn: optimizeFuelRoute,
-  });
+  const {
+    startLocation,
+    finishLocation,
+    vehicleRangeMiles,
+    fuelEfficiencyMpg,
+    routeResult,
+    isLoading,
+    isError,
+    setStartLocation,
+    setFinishLocation,
+    setVehicleRangeMiles,
+    setFuelEfficiencyMpg,
+    swapLocations,
+    calculateRoute,
+  } = useRouteOptimization();
 
   const routePath = routeResult
     ? toLeafletCoordinates(routeResult.route_geojson.coordinates)
     : [];
 
-  const startCoordinates = routePath[0] ?? ([41.8781, -87.6298] as [number, number]);
+  const startCoordinates =
+    routePath[0] ?? ([41.8781, -87.6298] as [number, number]);
+
   const endCoordinates =
-    routePath[routePath.length - 1] ?? ([29.7604, -95.3698] as [number, number]);
+    routePath[routePath.length - 1] ?? ([29.7604, -95.3698] as [
+      number,
+      number,
+    ]);
 
   const mapFuelStops = routeResult
-    ? buildMapFuelStops(routeResult.fuel_stops as ExtendedFuelStop[])
+    ? buildMapFuelStops(routeResult.fuel_stops)
     : [];
-
-  const swapLocations = () => {
-    setStartLocation(finishLocation);
-    setFinishLocation(startLocation);
-  };
-
-  const handleCalculateRoute = () => {
-    optimizeRouteMutation.mutate(
-      {
-        start: startLocation,
-        finish: finishLocation,
-      },
-      {
-        onSuccess: (data) => {
-          setRouteResult(data);
-        },
-        onError: (error) => {
-          console.error("API error:", error);
-        },
-      }
-    );
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -149,6 +105,7 @@ export default function App() {
                 <h1 className="text-2xl font-bold text-gray-900">
                   Fuel Route Optimizer
                 </h1>
+
                 <p className="text-sm text-gray-600">
                   Route-based fuel stop optimization
                 </p>
@@ -156,12 +113,18 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-6">
-              <button className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors">
+              <button
+                className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors"
+                type="button"
+              >
                 <HelpCircle className="w-5 h-5" />
                 <span className="text-sm font-medium">Help</span>
               </button>
 
-              <button className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors">
+              <button
+                className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors"
+                type="button"
+              >
                 <Settings className="w-5 h-5" />
                 <span className="text-sm font-medium">Settings</span>
               </button>
@@ -171,102 +134,39 @@ export default function App() {
       </header>
 
       <main className="max-w-[1440px] mx-auto px-8 py-8">
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-6">
-          <div className="flex items-end gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Start location
-              </label>
-              <input
-                type="text"
-                value={startLocation}
-                onChange={(event) => setStartLocation(event.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-              />
-            </div>
+        <SearchPanel
+          startLocation={startLocation}
+          finishLocation={finishLocation}
+          vehicleRangeMiles={vehicleRangeMiles}
+          fuelEfficiencyMpg={fuelEfficiencyMpg}
+          isLoading={isLoading}
+          onStartLocationChange={setStartLocation}
+          onFinishLocationChange={setFinishLocation}
+          onVehicleRangeMilesChange={setVehicleRangeMiles}
+          onFuelEfficiencyMpgChange={setFuelEfficiencyMpg}
+          onSwapLocations={swapLocations}
+          onCalculateRoute={calculateRoute}
+        />
 
-            <button
-              onClick={swapLocations}
-              className="p-2.5 hover:bg-gray-100 rounded-lg transition-colors mb-0.5"
-              title="Swap locations"
-            >
-              <ArrowLeftRight className="w-5 h-5 text-gray-600" />
-            </button>
+        {isError && <ErrorState onRetry={calculateRoute} />}
 
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Finish location
-              </label>
-              <input
-                type="text"
-                value={finishLocation}
-                onChange={(event) => setFinishLocation(event.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-              />
-            </div>
+        {isLoading && <LoadingState />}
 
-            <button
-              onClick={handleCalculateRoute}
-              disabled={optimizeRouteMutation.isPending}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-lg transition-colors shadow-sm"
-            >
-              {optimizeRouteMutation.isPending
-                ? "Calculating..."
-                : "Calculate Route"}
-            </button>
-          </div>
+        <MetricsSection routeResult={routeResult} />
 
-          {optimizeRouteMutation.isError && (
-            <p className="mt-4 text-sm text-red-600">
-              Unable to calculate route. Please verify the locations and try
-              again.
-            </p>
-          )}
-        </div>
+        <OptimizationDetailsSection routeResult={routeResult} />
 
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <MetricCard
-            icon={Route}
-            label="Distance"
-            value={formatMiles(routeResult?.distance_miles)}
-            iconColor="text-blue-600"
-            iconBgColor="bg-blue-50"
-          />
-
-          <MetricCard
-            icon={DollarSign}
-            label="Total fuel cost"
-            value={formatCurrency(routeResult?.total_fuel_cost)}
-            iconColor="text-green-600"
-            iconBgColor="bg-green-50"
-          />
-
-          <MetricCard
-            icon={MapPin}
-            label="Fuel stops"
-            value={
-              routeResult ? String(routeResult.optimal_fuel_stops_count) : "—"
-            }
-            iconColor="text-purple-600"
-            iconBgColor="bg-purple-50"
-          />
-
-          <MetricCard
-            icon={Gauge}
-            label="Estimated gallons"
-            value={formatNumber(routeResult?.estimated_gallons_needed)}
-            iconColor="text-orange-600"
-            iconBgColor="bg-orange-50"
-          />
-        </div>
-
-        <div className="grid grid-cols-[1fr,400px] gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr,400px] gap-6">
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 h-[600px]">
             <RouteMap
               startLocation={startCoordinates}
               endLocation={endCoordinates}
               fuelStops={mapFuelStops}
-              routePath={routePath.length > 0 ? routePath : [startCoordinates, endCoordinates]}
+              routePath={
+                routePath.length > 0
+                  ? routePath
+                  : [startCoordinates, endCoordinates]
+              }
             />
           </div>
 
@@ -279,23 +179,23 @@ export default function App() {
             <div className="space-y-4">
               {routeResult ? (
                 <>
-                  {(routeResult.fuel_stops as ExtendedFuelStop[]).map(
-                    (stop, index) => (
-                      <FuelStopCard
-                        key={`${stop.opis_truckstop_id}-${index}`}
-                        number={index + 1}
-                        name={stop.truckstop_name}
-                        location={
-                          [stop.city, stop.state].filter(Boolean).join(", ") ||
-                          stop.address ||
-                          "Unknown location"
-                        }
-                        mile={stop.distance_along_route_miles ?? 0}
-                        price={stop.retail_price ?? 0}
-                        estimatedCost={stop.estimated_cost ?? stop.fuel_cost ?? 0}
-                      />
-                    )
-                  )}
+                  {routeResult.fuel_stops.map((stop, index) => (
+                    <FuelStopCard
+                      key={`${stop.opis_truckstop_id}-${index}`}
+                      number={index + 1}
+                      name={stop.truckstop_name}
+                      location={
+                        [stop.city, stop.state].filter(Boolean).join(", ") ||
+                        stop.address ||
+                        "Unknown location"
+                      }
+                      mile={stop.distance_along_route_miles}
+                      price={stop.retail_price}
+                      estimatedCost={stop.estimated_cost ?? stop.fuel_cost ?? 0}
+                      segmentMiles={stop.segment_miles}
+                      gallonsPurchased={stop.gallons_purchased}
+                    />
+                  ))}
 
                   <div className="bg-gradient-to-br from-blue-50 to-green-50 border border-blue-200 rounded-lg p-4 mt-6">
                     <div className="flex items-start gap-3">
@@ -315,18 +215,51 @@ export default function App() {
 
                         <div className="text-sm">
                           <span className="text-gray-600">Distance: </span>
+
                           <span className="font-medium text-gray-900">
-                            {formatMiles(routeResult.final_segment.segment_miles)}
+                            {formatMiles(
+                              routeResult.final_segment.segment_miles
+                            )}
                           </span>
                         </div>
+
+                        {routeResult.final_segment.gallons_needed !==
+                          undefined && (
+                          <div className="text-sm mt-1">
+                            <span className="text-gray-600">
+                              Gallons needed:{" "}
+                            </span>
+
+                            <span className="font-medium text-gray-900">
+                              {routeResult.final_segment.gallons_needed.toFixed(
+                                2
+                              )}{" "}
+                              gal
+                            </span>
+                          </div>
+                        )}
+
+                        {routeResult.final_segment.estimated_cost !==
+                          undefined && (
+                          <div className="text-sm mt-1">
+                            <span className="text-gray-600">
+                              Estimated cost:{" "}
+                            </span>
+
+                            <span className="font-medium text-green-600">
+                              $
+                              {routeResult.final_segment.estimated_cost.toFixed(
+                                2
+                              )}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                 </>
               ) : (
-                <div className="text-sm text-gray-500 border border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  Calculate a route to see recommended fuel stops.
-                </div>
+                <EmptyRouteState />
               )}
             </div>
           </div>
